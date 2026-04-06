@@ -162,9 +162,9 @@
                             }
                           ]]></scriptfilter>
                           <!-- resolve maven variables -->
-                          <replaceregex pattern="\$\{project\.version\}" replace="${project.version}" flags="g"/>
-                          <replaceregex pattern="\$\{project\.artifactId\}" replace="${project.artifactId}" flags="g"/>
-                          <replaceregex pattern="\$\{buildtime\}" replace="${buildtime}" flags="g"/>
+                          <replaceregex pattern="\$[{]project\.version[}]" replace="${project.version}" flags="g"/>
+                          <replaceregex pattern="\$[{]project\.artifactId[}]" replace="${project.artifactId}" flags="g"/>
+                          <replaceregex pattern="\$[{]buildtime[}]" replace="${buildtime}" flags="g"/>
                         </tokenfilter>
                       </filterchain>
                     </copy>
