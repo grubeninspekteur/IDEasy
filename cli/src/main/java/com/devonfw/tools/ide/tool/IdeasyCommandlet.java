@@ -48,6 +48,12 @@ public class IdeasyCommandlet extends MvnBasedLocalToolCommandlet {
 
   private static final String BASH_CODE_SOURCE_FUNCTIONS = "source \"$IDE_ROOT/_ide/installation/functions\"";
 
+  private static final String PS_PROFILE_FUNCTION = "function ide { . \"$env:IDE_ROOT\\_ide\\installation\\bin\\ide.ps1\" @args }";
+
+  private static final String PS_PROFILE_POWERSHELL7 = "Documents\\PowerShell\\Microsoft.PowerShell_profile.ps1";
+
+  private static final String PS_PROFILE_POWERSHELL5 = "Documents\\WindowsPowerShell\\Microsoft.PowerShell_profile.ps1";
+
   /** The {@link #getName() tool name}. */
   public static final String TOOL_NAME = "ideasy";
   public static final String BASHRC = ".bashrc";
@@ -213,6 +219,7 @@ public class IdeasyCommandlet extends MvnBasedLocalToolCommandlet {
     fileAccess.symlink(ideasyVersionPath, installationPath);
     addToShellRc(BASHRC, ideRoot, null);
     addToShellRc(ZSHRC, ideRoot, "autoload -U +X bashcompinit && bashcompinit");
+    modifyPowerShellProfile(true);
     installIdeasyWindowsEnv(ideRoot, installationPath);
     IdeLogLevel.SUCCESS.log(LOG, "IDEasy has been installed successfully on your system.");
     LOG.warn("IDEasy has been setup for new shells but it cannot work in your current shell(s).\n"
@@ -477,6 +484,48 @@ public class IdeasyCommandlet extends MvnBasedLocalToolCommandlet {
     return userPath;
   }
 
+  private void modifyPowerShellProfile(boolean add) {
+
+    if (!this.context.getSystemInfo().isWindows()) {
+      return;
+    }
+    for (String profileRelPath : new String[] { PS_PROFILE_POWERSHELL7, PS_PROFILE_POWERSHELL5 }) {
+      if (add) {
+        LOG.info("Configuring IDEasy in {}", profileRelPath);
+      } else {
+        LOG.info("Removing IDEasy from {}", profileRelPath);
+      }
+      Path profile = this.context.getUserHome().resolve(profileRelPath);
+      FileAccess fileAccess = this.context.getFileAccess();
+      List<String> lines = fileAccess.readFileLines(profile);
+      if (lines == null) {
+        if (!add) {
+          continue;
+        }
+        lines = new ArrayList<>();
+      } else {
+        lines = new ArrayList<>(lines);
+      }
+      boolean found = false;
+      Iterator<String> iterator = lines.iterator();
+      while (iterator.hasNext()) {
+        String line = iterator.next();
+        if (line.trim().equals(PS_PROFILE_FUNCTION)) {
+          if (add) {
+            found = true;
+          } else {
+            iterator.remove();
+          }
+        }
+      }
+      if (add && !found) {
+        lines.add(PS_PROFILE_FUNCTION);
+      }
+      fileAccess.writeFileLines(lines, profile, true);
+      LOG.debug("Successfully updated {}", profileRelPath);
+    }
+  }
+
   /**
    * Adds ourselves to the shell RC (run-commands) configuration file.
    *
@@ -596,6 +645,7 @@ public class IdeasyCommandlet extends MvnBasedLocalToolCommandlet {
     Path ideRoot = this.context.getIdeRoot();
     removeFromShellRc(BASHRC, ideRoot);
     removeFromShellRc(ZSHRC, ideRoot);
+    modifyPowerShellProfile(false);
     Path idePath = this.context.getIdePath();
     uninstallIdeasyWindowsEnv(ideRoot);
     uninstallIdeasyIdePath(idePath);
